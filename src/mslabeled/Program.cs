@@ -17,7 +17,7 @@ namespace mslabeled
 
             try
             {
-                DoGithubStuff().Wait();
+                DoGitHubStuff().Wait();
             }
             catch (Exception ex)
             {
@@ -26,7 +26,7 @@ namespace mslabeled
             }
         }
 
-        private static async Task DoGithubStuff()
+        private static async Task DoGitHubStuff()
         {
             var logger = new LoggerConfiguration()
                 .WriteTo.Seq("http://localhost:5341")
