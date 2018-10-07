@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Octokit;
 using Octokit.Internal;
 using Serilog;
@@ -28,6 +31,10 @@ namespace mslabeled
 
         private static async Task DoGitHubStuff()
         {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddUserSecrets(Assembly.GetExecutingAssembly()).Build();
+
             var logger = new LoggerConfiguration()
                 .WriteTo.Seq("http://localhost:5341")
                 .MinimumLevel.Verbose()
@@ -36,7 +43,7 @@ namespace mslabeled
 
             logger.Information("Starting");
 
-            var login = new Credentials("TODO-USERNAME", "TODO-ACCESSTOKEN");
+            var login = new Credentials(config["GitHubUser"], config["GitHubToken"]);
             var credentialStore = new InMemoryCredentialStore(login);
             var github = new GitHubClient(
                 new ProductHeaderValue("MSLabeled"),
