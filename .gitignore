@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Extra ignores from Sean
+*.DotSettings
+
 # User-specific files
 *.suo
 *.user
