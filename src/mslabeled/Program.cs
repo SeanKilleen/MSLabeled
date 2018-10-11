@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -56,24 +57,41 @@ namespace mslabeled
             {
                 i++;
                 var labels = await github.Issue.Labels.GetAllForRepository(repo.Id);
+                var potentiallyMatchingLabels = labels
+                    .Where(x => LabelIsPotentiallyUpForGrabs(x.Name))
+                    .Select(lab => lab.Name)
+                    .ToList();
 
-                labels
-                    .Where(x=> LabelIsPotentiallyUpForGrabs(x.Name))
-                    .ToList()
-                    .ForEach(async match =>
-                    {
-                        var issueRequest = new RepositoryIssueRequest
+                var openIssuesWithMatchingLabels = new RepositoryIssueRequest
+                {
+                    State = ItemStateFilter.Open,
+                    Filter = IssueFilter.All
+                };
+
+                potentiallyMatchingLabels.ForEach(x => openIssuesWithMatchingLabels.Labels.Add(x));
+
+                var issuesWithMatchingLabels = await github.Issue.GetAllForRepository(repo.Id, openIssuesWithMatchingLabels);
+                logger.Debug("Repo {repoName} has {totalIssueCount} total potentially matching issues according to Octokit.", repo.FullName, issuesWithMatchingLabels.Count);
+
+                if (issuesWithMatchingLabels.Count > 0)
+                {
+                    potentiallyMatchingLabels
+                        .ForEach(match =>
                         {
-                            Filter = IssueFilter.All,
-                            State = ItemStateFilter.Open,
-                            Labels = {match.Name}
-                        };
-                        var issueList = await github.Issue.GetAllForRepository(repo.Id, issueRequest);
-                        logger.Information("Repo {repoName} with {starCount} has label {labelName} with {issueCount} issues", repo.FullName, repo.StargazersCount, match.Name, issueList.Count);
-                    });
+                            var matchingIssues = issuesWithMatchingLabels
+                                .Where(x => x.Labels.Any(lab => lab.Name == match)).ToList();
+                            logger.Information(
+                                "Repo {repoName} with {starCount} has label {labelName} with {issueCount} issues",
+                                repo.FullName, repo.StargazersCount, match, matchingIssues.Count);
+                        });
+                }
+                else
+                {
+                    logger.Debug("Skipping {repoName} because there are no potentially matching issues", repo.FullName);
+                }
 
                 CheckApiInfo(github.GetLastApiInfo(), logger);
-                if(i % 20 == 0){logger.Verbose("Checked {numberOfRepos} repositories so far", i);}
+                if (i % 20 == 0) { logger.Verbose("Checked {numberOfRepos} repositories so far", i); }
             }
         }
 
